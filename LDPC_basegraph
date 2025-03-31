@@ -1,0 +1,48 @@
+
+clc; clear; close all;
+
+% Define LDPC Parameters
+baseGraph = 1; % Choose 5G NR LDPC base graph (1 or 2)
+Z = 22; % Lifting size for Base Graph 1 (use 10 for Base Graph 2)
+
+% Compute Message Length
+K = Z * 22; % Must be a multiple of 22 for baseGraph = 1
+
+% Initialize SNR range and BER vector
+SNR_dB_range = 0:2:20; % Signal-to-Noise Ratio range (from 0 to 20 dB in steps of 2)
+BER_values = zeros(length(SNR_dB_range), 1);
+
+% Loop through each SNR value
+for i = 1:length(SNR_dB_range)
+    SNR_dB = SNR_dB_range(i); % Current SNR value in dB
+    noiseVar = 10^(-SNR_dB / 10); % Compute noise variance
+    
+    % Generate random binary message
+    msg = randi([0 1], K, 1);
+
+    % LDPC Encoding
+    encodedMsg = nrLDPCEncode(msg, baseGraph);
+
+    % Simulate AWGN Channel (corrected for noise variance)
+    % This ensures the noise power is correct for the given SNR
+    receivedSignal = encodedMsg + sqrt(noiseVar / 2) * randn(size(encodedMsg)); % Gaussian noise
+
+    % LDPC Decoding (Increase iterations to improve performance)
+    maxIterations = 100; % Set to higher value for better decoding accuracy
+    decodedMsg = nrLDPCDecode(receivedSignal, baseGraph, maxIterations);
+
+    % Compute Bit Error Rate (BER)
+    numErrors = sum(msg ~= decodedMsg);  % Count the number of bit errors
+    BER = numErrors / length(msg); % Calculate BER
+
+    % Store BER for the current SNR
+    BER_values(i) = BER;
+end
+
+% Plot BER vs SNR
+figure;
+semilogy(SNR_dB_range, BER_values, 'b-o', 'LineWidth', 2); % Use semilog scale for BER
+xlabel('SNR (dB)');
+ylabel('Bit Error Rate (BER)');
+title('BER vs SNR for LDPC Encoding and Decoding');
+grid on;
